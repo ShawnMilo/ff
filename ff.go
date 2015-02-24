@@ -40,12 +40,10 @@ func init() {
 // walker implements filepath.WalkFunc.
 func walker(path string, info os.FileInfo, err error) error {
 	if err != nil {
-		return err
+		log.Println(err)
 	}
-	//log.Printf("checking %s\n", path)
 	for _, arg := range args {
-		//if !strings.Contains(strings.ToLower(arg), strings.ToLower(path)){
-		if !strings.Contains(strings.ToLower(path), strings.ToLower(arg)) {
+		if !strings.Contains(strings.ToLower(info.Name()), strings.ToLower(arg)) {
 			return nil
 		}
 	}
