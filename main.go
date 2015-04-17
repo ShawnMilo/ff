@@ -76,14 +76,12 @@ func walker(path string, info os.FileInfo, err error) error {
 }
 
 func main() {
-	var max = 2
+	var max = runtime.NumCPU() * 10
 	for i := 0; i < max; i++ {
 		wg.Add(1)
 		go check()
 	}
-	go func() {
-		filepath.Walk(path, walker)
-		close(filenames)
-	}()
+	filepath.Walk(path, walker)
+	close(filenames)
 	wg.Wait()
 }
