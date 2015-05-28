@@ -3,17 +3,21 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
 )
 
-var path string // path to search
+var dir string // path to search
 var args []string
 var wg sync.WaitGroup
+
+var skip []string
 
 var filenames chan rec
 
@@ -35,11 +39,11 @@ func isDir(path string) bool {
 
 func init() {
 	// Set up command-line flags.
-	flag.StringVar(&path, "p", ".", "path")
+	flag.StringVar(&dir, "p", ".", "path")
 	flag.Parse()
 	// Validate flags.
-	if !isDir(path) {
-		log.Fatal(path, "is not a valid path.")
+	if !isDir(dir) {
+		log.Fatal(dir, "is not a valid path.")
 	}
 	args = flag.Args()
 	if len(args) == 0 {
@@ -47,6 +51,22 @@ func init() {
 	}
 	filenames = make(chan rec)
 	runtime.GOMAXPROCS(runtime.NumCPU())
+
+	// Read rc file if available.
+	cwd, err := os.Getwd()
+	if err != nil {
+		log.Fatal(err)
+	}
+	rc, err := ioutil.ReadFile(path.Join(cwd, ".ffrc"))
+	skip = []string{}
+	if err != nil {
+		return
+	}
+	for _, bad := range strings.Split(string(rc), "\n") {
+		if bad != "" {
+			skip = append(skip, bad)
+		}
+	}
 }
 
 func check() {
@@ -56,6 +76,13 @@ func check() {
 			if !strings.Contains(strings.ToLower(r.filename), strings.ToLower(arg)) {
 				print = false
 				break
+			}
+
+			for _, bad := range skip {
+				if strings.Contains(r.path, bad) {
+					print = false
+					break
+				}
 			}
 		}
 		if print {
@@ -81,7 +108,7 @@ func main() {
 		wg.Add(1)
 		go check()
 	}
-	filepath.Walk(path, walker)
+	filepath.Walk(dir, walker)
 	close(filenames)
 	wg.Wait()
 }
