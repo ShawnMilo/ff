@@ -50,7 +50,6 @@ func init() {
 		log.Fatal("no arguments passed")
 	}
 	filenames = make(chan rec)
-	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	// Read rc file if available.
 	cwd, err := os.Getwd()
