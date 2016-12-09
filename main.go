@@ -42,6 +42,7 @@ func check() {
 func walker(path string, info os.FileInfo, err error) error {
 	if err != nil {
 		log.Println(err)
+		return nil
 	}
 	filenames <- rec{path: path, filename: info.Name()}
 	return nil
