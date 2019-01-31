@@ -9,9 +9,7 @@ import (
 	"sync"
 )
 
-var args []string // arguments passed by user to partially match filename
-var wg sync.WaitGroup
-var maxWorkers = 512
+var maxWorkers = 32
 
 var filenames = make(chan rec)
 
@@ -21,7 +19,7 @@ type rec struct {
 	filename string
 }
 
-func check() {
+func check(args []string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for r := range filenames {
 		match := true
@@ -41,7 +39,8 @@ func check() {
 // walker implements filepath.WalkFunc.
 func walker(path string, info os.FileInfo, err error) error {
 	if err != nil {
-		log.Println(err)
+		// Don't blast stderr with noise for cache files that have
+		// gone away.
 		return nil
 	}
 	filenames <- rec{path: path, filename: info.Name()}
@@ -49,13 +48,13 @@ func walker(path string, info os.FileInfo, err error) error {
 }
 
 func main() {
+	var wg sync.WaitGroup
 	if len(os.Args) == 1 {
 		log.Fatal("no arguments passed")
 	}
-	args = os.Args[1:]
 	for i := 0; i < maxWorkers; i++ {
 		wg.Add(1)
-		go check()
+		go check(os.Args[1:], &wg)
 	}
 	filepath.Walk(".", walker)
 	close(filenames)
